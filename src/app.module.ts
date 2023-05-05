@@ -4,8 +4,7 @@ import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { BookmarkModule } from './bookmark/bookmark.module';
 import { ConfigModule } from '@nestjs/config';
-import { jwtConstants } from './auth/constants';
-import { JwtModule } from '@nestjs/jwt';
+
 
 @Module({
   imports: [
@@ -15,11 +14,6 @@ import { JwtModule } from '@nestjs/jwt';
     BookmarkModule,
     ConfigModule.forRoot({
       isGlobal: true
-    }),
-    JwtModule.register ({
-      global: true,
-      secret: jwtConstants.secret,
-      signOptions : { expiresIn : '60s'}
     })
   ],
 })
