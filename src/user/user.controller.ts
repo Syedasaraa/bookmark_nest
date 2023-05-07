@@ -1,15 +1,31 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guard';
-import { Request } from 'express';
+import { GetUser } from 'src/auth/decorator';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UserController {
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
-  profile(@Req() req: Request) {
-    console.log({
-      user : req.user
-    })
-    return 'User info';
+  @Get()
+  async getAllUsers() {
+    const users = await prisma.user.findMany();
+    return users;
+  }
+
+  @Get(':id')
+  profile(@GetUser('') user: string) {
+    return { user };
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id') id: number) {
+    const idd = Number(id);
+    await prisma.user.delete({
+      where: {
+        id: idd,
+      },
+    });
+    return { message: 'Successful . User deleted' };
   }
 }
