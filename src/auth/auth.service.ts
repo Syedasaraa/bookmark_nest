@@ -8,7 +8,11 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwtService: JwtService ,private config : ConfigService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+    private config: ConfigService,
+  ) {}
 
   async signup(dto: AuthDto) {
     try {
@@ -27,11 +31,25 @@ export class AuthService {
           lastName: true,
           createdAt: true,
           updatedAt: true,
+
         },
       });
+      if (dto.rememberMeToken) {
+        const rememberMeToken = this.jwtService.sign({
+          email: user.email,
+          sub: user.id,
+        });
+         await this.prisma.user?.update({
+          where: {
+            id: user.id
+          },
+           data: { 
+            rememberMeToken
+          },
+        });
+      }
       //return the saved user
-      return this.signToken(user.id, user.email)
-      
+      return this.signToken(user.id, user.email);
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -67,23 +85,28 @@ export class AuthService {
 
       //send back the user/JWT
       return this.signToken(user.id, user.email);
-
     } catch (error) {
       console.log(error);
       throw error;
     }
   }
 
-  async signToken(userId : number , email : string) : Promise < {access_token : string }> {
+  async signToken(
+    userId: number,
+    email: string,
+  ): Promise<{ access_token: string }> {
     const payload = {
       sub: userId,
-      email
-    }
+      email,
+    };
 
     const token = await this.jwtService.signAsync(payload, {
-      secret : this.config.get('SECRET')
-    })
+      secret: this.config.get('SECRET'),
+    });
 
-    return { access_token : token}
+    return { access_token: token };
   }
+
 }
+
+
