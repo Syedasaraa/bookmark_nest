@@ -21,6 +21,7 @@ model User {
   firstName String?
   lastName  String?
   rememberMeToken String?
+  rememberChecked Boolean?
   bookmarks Bookmark[]
 }
 

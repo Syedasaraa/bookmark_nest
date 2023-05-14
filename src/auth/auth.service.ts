@@ -15,9 +15,12 @@ export class AuthService {
   ) {}
 
   async signup(dto: AuthDto) {
+
     try {
+
       //generate the password hash
       const password = await argon.hash(dto.password);
+      let rememberMeToken;
       //save the new user in db
       const user = await this.prisma.user.create({
         data: {
@@ -34,8 +37,8 @@ export class AuthService {
 
         },
       });
-      if (dto.rememberMeToken) {
-        const rememberMeToken = this.jwtService.sign({
+      if (dto.rememberchecked) {
+        rememberMeToken = this.jwtService.sign({
           email: user.email,
           sub: user.id,
         });
@@ -44,12 +47,17 @@ export class AuthService {
             id: user.id
           },
            data: { 
-            rememberMeToken
+             rememberMeToken: rememberMeToken,
           },
         });
       }
+      
+      const tokens = {
+        rememberMeToken: rememberMeToken,
+        access : this.signToken(user.id , user.email)
+      };
       //return the saved user
-      return this.signToken(user.id, user.email);
+      return tokens
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
