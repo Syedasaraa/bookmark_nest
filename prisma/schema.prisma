@@ -15,14 +15,17 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  email     String     @unique
-  password  String
-  
-  firstName String?
-  lastName  String?
+  email    String @unique
+  password String
+
+  role            String
+  firstName       String?
+  lastName        String?
   rememberMeToken String?
   rememberChecked Boolean?
-  bookmarks Bookmark[]
+  bookmarks       Bookmark[]
+  shop            Shop?      @relation(fields: [shopId], references: [id])
+  shopId          Int?
 }
 
 model Bookmark {
@@ -36,4 +39,20 @@ model Bookmark {
 
   user   User @relation(fields: [userId], references: [id])
   userId Int
+}
+
+model Shop {
+  id     Int    @id @default(autoincrement())
+  title  String
+  User   User[]
+  posts  Post[]
+  postId Int
+}
+
+model Post {
+  id Int @id @default(autoincrement())
+
+  description String
+  shop        Shop   @relation(fields: [shopId], references: [id])
+  shopId      Int
 }
