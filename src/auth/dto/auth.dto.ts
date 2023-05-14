@@ -9,6 +9,6 @@ export class AuthDto {
   @IsNotEmpty()
   password !: string;
   
-  @IsBoolean
+  @IsBoolean()
   rememberMeToken !: boolean;
 }
