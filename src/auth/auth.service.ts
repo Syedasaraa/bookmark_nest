@@ -15,9 +15,8 @@ export class AuthService {
   ) {}
 
   async signup(dto: AuthDto) {
-
+    console.log(dto)
     try {
-
       //generate the password hash
       const password = await argon.hash(dto.password);
       let rememberMeToken;
@@ -26,6 +25,8 @@ export class AuthService {
         data: {
           email: dto.email,
           password,
+          rememberChecked: dto.rememberMeChecked,
+          role: dto.role,
         },
         select: {
           email: true,
@@ -34,32 +35,57 @@ export class AuthService {
           lastName: true,
           createdAt: true,
           updatedAt: true,
-
+          rememberChecked: true,
+          rememberMeToken: true,
+          role: true,
         },
       });
-      if (dto.rememberchecked) {
+      if (dto.rememberMeChecked) {
         rememberMeToken = this.jwtService.sign({
           email: user.email,
           sub: user.id,
         });
-         await this.prisma.user?.update({
+        await this.prisma.user.update({
           where: {
-            id: user.id
+            email: dto.email
           },
-           data: { 
-             rememberMeToken: rememberMeToken,
+          data: {
+            rememberMeToken: rememberMeToken,
           },
         });
       }
-      
-      const tokens = {
-        rememberMeToken: rememberMeToken,
-        access : this.signToken(user.id , user.email)
-      };
+      if (dto.shop) {
+        await this.prisma.user.update({
+          where: {
+           email : dto.email
+          },
+          data: {
+            shop: {
+              create: {
+                postId:0,
+                title: dto.shop,
+               }
+            }
+          }
+       })
+      }
+
       //return the saved user
-      return tokens
+        let tokens;
+        if (rememberMeToken) {
+          tokens = {
+            rememberMeToken: rememberMeToken,
+            access: this.signToken(user.id, user.email),
+          };
+        } else {
+          tokens = this.signToken(user.id, user.email);
+        }
+      return tokens;
+      
     } catch (error) {
+      console.log(error)
       if (error instanceof PrismaClientKnownRequestError) {
+        console.log(error.code)
         if (error.code === 'P2002') {
           throw new ForbiddenException('Credentials taken');
         }
@@ -73,14 +99,30 @@ export class AuthService {
     try {
       //find user by email
       //if does not exist throw an error
+
       const user = await this.prisma.user.findFirst({
         where: {
           email: dto.email,
         },
       });
 
+      let rememberMeToken;
+      if (dto.rememberMeChecked) {
+        rememberMeToken = this.jwtService.sign({
+          email: user?.email,
+          sub: user?.id,
+        });
+        await this.prisma.user?.update({
+          where: {
+            email: dto.email,
+          },
+          data: {
+            rememberMeToken: rememberMeToken,
+          },
+        });
+      }
       if (!user) {
-        return { status: 'failed', message: 'User Not found' };
+        throw new ForbiddenException ('User not found');
       }
 
       //match password
@@ -88,11 +130,20 @@ export class AuthService {
 
       const isMatch = await argon.verify(user.password, dto.password);
       if (!isMatch) {
-        return { status: 'failed', message: 'Incorrect password' };
+        throw new ForbiddenException('Incorrect Password');
       }
 
       //send back the user/JWT
-      return this.signToken(user.id, user.email);
+      let tokens;
+      if (rememberMeToken) {
+        tokens = {
+          rememberMeToken: rememberMeToken,
+          access: this.signToken(user.id, user.email),
+        };
+      } else {
+        tokens = this.signToken(user.id, user.email);
+      }
+      return tokens;
     } catch (error) {
       console.log(error);
       throw error;
@@ -114,7 +165,4 @@ export class AuthService {
 
     return { access_token: token };
   }
-
 }
-
-
